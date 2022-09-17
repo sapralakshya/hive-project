@@ -1,0 +1,40 @@
+-> The reducer will work when we use limit 1 in any hive query.
+
+-> If multiple clients trying to access hive at the same time then it will work completely fine  whatever tables are being created by different different clients their metadata will be         stored in hive metastore and the table is stored in the hive warehouse but the condition is our hadoop cluster should be big (have a suitable amout of nodes) so that if multiple clients perform any operation at same time it will be managed.
+
+-> To optimize the processing time for hive query the solution is to create partitions:
+    1.) create a statically partitioned table based on month field lets say table_part
+    2.) static partitioning is done because we know that total 12 months data will be there and load the data accordingly also static partioning is faster than dynamic
+    3.) insert the data in the table by writing command ' insert overwrite table table_part partition (month='jan') select * from transaction_details where month='jan';
+    4.) similarly the data will be stored for all the months 
+    5.) when you fire the hive query as ' select month, sum(amount) as revenue from table_part group by month;' this will give result faster.
+
+-> In the above partitioned table creating a new partition for month dec will simply be done by :
+    insert overwrite table table_part partition(month='dec') select * from transaction_details where month='dec';
+
+-> for removing the semantic error or strict coloumn we just need to set one property before creating dynamically partitioned table i.e. set hive.exec.dynamic.partition.mode=nonstrict;
+
+-> creating a csv table using built in serde :
+
+   create table data_csv (
+    id int,
+    first_name string,
+    last_name string,
+    email string,
+    gender string,
+    ip_address string
+   )
+   row format serde 'org.apache.hadoop.hive.serde2.opencsvserde'
+   with serdeproperties (
+    "seperator" =","
+     )
+    stored as textfile;
+
+-> The solution is we need to have all the csv files under one directory in hdfs and create the external table that will point to the directory and not to any individual file so the table will be pointig to all the files and whenever any query we run it will give the result accordingly.
+
+-> The following command failed because whenever we try to load data from local system we need to specify 'file://' this file word as it gives indication to hive engine that file is to be loaded from loacl system.
+
+-> Yes we can add any no of nodes ,it totally depends on our requirement adding new node to a cluster can be done by:
+   . Install the application on the node depending on which role that node is to be given (like master node,or slave node or any other )
+   . Connect the nodes to the server and create id password for that node 
+   . In this way new nodes can be added to the cluster
