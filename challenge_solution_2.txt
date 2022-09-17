@@ -1,0 +1,32 @@
+Practical questions
+
+-> vim join_1.txt
+   vim join_2.txt
+
+   create table customers (
+   cust_id int,
+   name string,
+   age int,
+   address string,
+   salary float
+)
+row format delimited
+fields terminated by ',';
+
+load data local inpath 'file:///home/cloudera/join_1.txt' into table customers;
+
+create table order (
+o_id int,
+date string,
+cust_id string,
+amount float
+)
+row format delimited
+fields terminated by ',';
+
+load data local inpath 'file:///home/cloudera/join_2.txt' into table order;
+
+inner join : select c.name,c.address,o.date.o.amount from customers c join order o on c.cust_id=o.cust_id;
+left join : select c.name,c.address,o.date.o.amount from customers c left join order o on c.cust_id=o.cust_id;
+right join : select c.name,c.address,o.date.o.amount from customers c right join order o on c.cust_id=o.cust_id;
+full join : select c.name,c.address,o.date.o.amount from customers c full outer join order o on c.cust_id=o.cust_id;

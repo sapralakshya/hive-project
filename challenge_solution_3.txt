@@ -1,0 +1,62 @@
+-> create table air-quality (
+   date string,
+   time string,
+   co float,
+   pt08s1 float,
+   nmhc int,
+   c6h6 float,
+   pt08s2 float,
+   nox float,
+   pt08s3 float,
+   no2 float,
+   pt08s4 float,
+   pt08s5 float,
+   t float,
+   rh float,
+   ah float
+)
+row format serde 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
+with seredeproperties (
+"separatorChar"= "\;",
+"escapeChar" = "\\"
+)
+stored as textfile
+tblproperties("skip.header.line.count"="1");
+
+load data local inpath 'file:///home/cloudera/Air.csv' into table air_quality;
+
+select * from air_quality limit 10;
+
+saving select query in text file:
+- in linux terminal type command hive -e "select * from sample_db.air_quality limit 10" > /home/cloudera/result.txt
+- then check the file content using cat result.txt
+
+select date,avg(co) as average_co from air_quality group by date;
+
+filter examples: select date,co,t from air_quality where t>10;
+                 select * from air_quality where date in ('10-03-2004','11-03-2004');
+                 select * from air_quality where date like '10%';
+                 select * from air_quality where pt08s1 between 1000 and 2000 limit 10;
+                 select * from air_quality where t<rh limit 10;
+
+regex example : select regexp_replace(date,"\-","\\") as date from air_quality limit 10;
+
+alter table: alter table air_quality change nmhc nmhc float;
+
+order by operation : select * from air_quality order by nmhc limit 10;
+
+where clause :   select date,co,t from air_quality where t>10;
+
+sorting : select * from air_quality sort by nmhc limit 10;
+
+distinct : select count (distinct date) from air_quality;
+
+like: select * from air_quality where date like '10%';
+
+union : select date,co from air_quality where date like '10%'
+        union all
+        select date,co from air_quality where date like '11%';
+
+view: create view air_qual_view as select * from air_quality limit 10;
+
+drop: drop table air_quality;          
