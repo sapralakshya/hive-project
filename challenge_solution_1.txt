@@ -30,7 +30,7 @@
      )
     stored as textfile;
 
--> The solution is we need to have all the csv files under one directory in hdfs and create the external table that will point to the directory and not to any individual file so the table will be pointig to all the files and whenever any query we run it will give the result accordingly.
+-> The solution is we need to have all the csv files under one directory in hdfs and create the external table that will point to the directory and not to any individual file so the table will be pointig to all the files and whenever any query we run it will give the result accordingly.Provided all the csv files have same coloumn names as only single table is to be created.
 
 -> The following command failed because whenever we try to load data from local system we need to specify 'file://' this file word as it gives indication to hive engine that file is to be loaded from loacl system.
 
