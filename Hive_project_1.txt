@@ -1,0 +1,177 @@
+Problem Statement:
+============================================================================================================================================================================================
+We have the real time data for ineuron technical consultant team and we need to perform some required analysis on the data. The data includes the employee login time,logout time details,how many queries he/she has solved,what is the avg rating of employee 
+============================================================================================================================================================================================
+
+1.) create table agent_login(
+s_no int,
+agent string,
+date string,
+login_time string,
+logout_time string,
+duration string
+)
+row format delimited
+fields terminated by ','
+tblproperties("skip.header.line.count"="1");
+
+2.) load data local inpath 'file:///home/cloudera/AgentLogingReport.csv' into table agent_login;
+
+3.) select distinct agent from agent_login;
+    result (only few rows): 	 Aditya shinde
+           				 Aditya_iot
+					 Amersh
+					 Ameya Jain
+					 Ankitjha
+					 Anurag Tiwari
+
+4.) create table agent_per(
+    s_no int,
+    date string,
+    agent string,
+    total_chats int,
+    avg_resp_time string,
+    avg_reso_time string,
+    avg_rating float,
+    feedback int
+   )
+row format delimited
+fields terminated by ','
+tblproperties("skip.header.line.count"="1");
+
+select agent,avg(avg_rating) as avg_rating from agent_per group by agent;
+result(only few rows)  Abhishek      0.0
+			     Aditya        0.0
+     		    	     Aditya Shinde 1.800333340
+			     Aditya_iot    2.34533333778
+                       Amersh        0.0 
+
+5.) select agent , count(distinct date) as total_working_days from agent_login group by agent;
+result(only few rows): Aditya Shinde 1
+                       Aditya_iot    8
+                       Amersh        2
+                       Ameya Jain    7;
+                       Ankitjha      2
+
+6.) select agent,sum(total_chats) as total_query from agent_per group by agent;
+result(only few rows): Abhishek       0
+                       Aditya         0
+                       Aditya Shinde  277
+                       Aditya_iot     231
+                       Amersh         0
+                       Ameya Jain     322
+
+7.) select agent,sum(feedback) as total_feedback from agent_per group by agent;
+result(only few rows): Abhishek       0
+                       Aditya         0
+                       Aditya Shinde  153
+                       Aditya_iot     131
+                       Amersh         0
+                       Ameya Jain     228
+
+8.) select agent,avg(avg_rating) as avg_rating from agent_per group by agent having avg_rating between 3.5 and 4;
+result                 Boktiar Ahmed Bappy      3.567999982833868
+                       Ishwanth Kumar           3.543333347638448
+                       Khushboo Priya           3.703666663169861
+                       Manjunatha A             3.5946666876475017     
+
+9.) select agent,avg(avg_rating) as avg_rating from agent_per group by agent having avg_rating <3.5;
+result(only few rows): Abhishek      0.0
+                       Aditya        0.0
+                       Aditya Shinde 1.8003333409627278
+                       Aditya_iot    2.3453333377838135
+                       Amersh        0.0
+                       Ameya Jain    2.21966667175293                
+
+10.) select agent,avg(avg_rating) as avg_rating from agent_per group by agent having avg_rating >4.5;
+result  : No rows printed
+
+11.)select agent,feedback from(select agent,sum(feedback) as feedback, avg(avg_rating) as avg_rating from agent_per group by agent)t where avg_rating >4.5
+result   : No rows printed
+
+12.) select concat("week ",weekofyear(from_unixtime(unix_timestamp(date,'mm/dd/yyyy'), 'yyyy-mm-dd'))),agent,from_unixtime(cast(avg(unix_timestamp(avg_resp_time,'HH:mm:ss'))as bigint),'HH:mm:ss') as avg_time  from agent_per  group by concat("week ",weekofyear(from_unixtime(unix_timestamp(date,'mm/dd/yyyy'), 'yyyy-mm-dd'))),agent;
+
+result(only few rows):
+
+week 26 Abhishek        00:00:00
+week 26 Aditya          00:00:00
+week 26 Aditya Shinde   00:00:55
+week 27 Abhishek        00:00:00
+week 27 Aditya          00:00:00
+week 27 Aditya Shinde   00:00:47
+week 28 Aditya          00:00:00
+week 28 Aditya Shinde   00:00:56
+week 28 Aditya_iot      00:00:52
+week 29 Abhishek        00:00:00
+week 29 Aditya          00:00:00
+week 29 Aditya Shinde   00:00:00
+week 30 Abhishek        00:00:00
+week 30 Aditya          00:00:00
+week 30 Aditya Shinde   00:00:00
+
+13.) select concat("week ",weekofyear(from_unixtime(unix_timestamp(date,'mm/dd/yyyy'), 'yyyy-mm-dd'))),agent,from_unixtime(cast(avg(unix_timestamp(avg_reso_time,'HH:mm:ss'))as bigint),'HH:mm:ss') as avg_time  from agent_per  group by concat("week ",weekofyear(from_unixtime(unix_timestamp(date,'mm/dd/yyyy'), 'yyyy-mm-dd'))),agent;
+
+result(only few rows):
+
+week 26 Abhishek        00:00:00
+week 26 Aditya          00:00:00
+week 26 Aditya Shinde   00:15:27
+week 27 Abhishek        00:00:00
+week 27 Aditya          00:00:00
+week 27 Aditya Shinde   00:15:03
+week 28 Abhishek        00:00:00
+week 28 Aditya          00:00:00
+week 28 Aditya Shinde   00:22:38
+week 29 Abhishek        00:00:00
+week 29 Aditya          00:00:00
+week 29 Aditya Shinde   00:00:00
+week 30 Abhishek        00:00:00
+week 30 Aditya          00:00:00
+week 30 Aditya Shinde   00:00:00
+
+
+14.) select agent,sum(total_chats) as chats from(select agent,total_chats,feedback from agent_per where feedback!=0)t group by agent;
+result(only few rows): Aditya Shinde 277
+                       Aditya_iot    231
+                       Ameya Jain    322
+                       Anirudh       80
+                       Ankitjha      4
+                       Anurag Tiwari 4
+
+15.) select concat("week ",weekofyear(from_unixtime(unix_timestamp(date,'dd-MMM-yy'), 'yyyy-mm-dd'))),agent,from_unixtime(cast(sum(unix_timestamp(duration,'HH:mm:ss'))as bigint),'HH:mm:ss') as avg_time  from agent_login  group by concat("week ",weekofyear(from_unixtime(unix_timestamp(date,'dd-MMM-yy'), 'yyyy-mm-dd'))),agent;
+
+result(only few rows):
+
+week 48 Tarun           10:08:20
+week 51 Aditya Shinde   00:02:10
+week 51 Aditya_iot      18:22:58
+week 51 Ameya Jain      14:04:36
+week 52 Aditya_iot      05:20:54
+week 52 Amersh          03:03:50
+week 52 Ameya Jain      19:59:56
+
+
+
+16.) in linux terminal(inner join) : hive -e "select l.agent,avg(feedback) as feedback, avg(avg_rating) as avg_rating from project_1.agent_login l join project_1.agent_per p on l.agent=p.agent group by l.agent limit 10" > /home/cloudera/project_1join.csv
+
+in linux terminal(left join) : hive -e " select l.agent, avg(feedback) as feedback,avg(avg_rating) as avg_rating from project_1.agent_login l left join project_1.agent_per p on l.agent=p.agent group by l.agent limit 10" > /home/cloudera/project_2join.csv 
+
+in linux terminal(right join) : hive -e " select p.agent, avg(feedback) as feedback,avg(avg_rating) as avg_rating from project_1.agent_login l right join project_1.agent_per p on l.agent=p.agent group by p.agent limit 10" > /home/cloudera/project_3join.csv 
+
+
+
+17.) set hive.exec.dynamic.partition.mode=nonstrict
+     
+     create table agent_part_buck (
+      sno int,
+      date string,
+      login_time string,
+      logout_time string,
+      duration string
+    )
+  partitioned by (agent string)
+  clustered by (sno)
+  sorted by (sno)
+  into 2 buckets;
+
+insert overwrite table agent_part_buck partition(agent) select s_no,date,login_time,logout_time,duration,agent from agent_login;
