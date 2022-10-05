@@ -1,0 +1,599 @@
+Problem Statement: 
+===========================================================================================================================================================================================
+New York City is a thriving metropolis and just like most other cities of similar size, one of the biggest problems its residents face is parking. The classic combination of a huge number of cars and a cramped geography is the exact recipe that leads to a large number of parking tickets.
+ 
+In an attempt to scientifically analyse this phenomenon, the NYC Police Department regularly collects data related to parking tickets. This data is made available by NYC Open Data portal. We will try and perform some analysis on this data.
+===========================================================================================================================================================================================
+Optimization:
+===========================================================================================================================================================================================
+create table parking (
+summons_num string,
+plate_id string,
+reg_state string,
+plate_type string,
+issue_date string,
+violation_code int,
+vehicle_body_type string,
+vehicle_make string,
+agency string,
+street_1 float,
+street_2 float,
+street_3 float,
+vehicle_exp_date string,
+violation_loc int,
+violation_precinct int,
+issuer_precinct int,
+issuer_code string,
+issuer_command string,
+issuer_squad string,
+violation_time string,
+time_first_obs string,
+violation_country string,
+violation_fr_op string,
+house_num string,
+street_name string,
+intersect_street string,
+date_first_obs string,
+law_section string,
+sub_div string,
+violation_leg_code string,
+days_park_in_effect string,
+from_hours_in_effect string,
+to_hours_in_effect string,
+vehicle_color string,
+unregistered_veh string,
+vehicle_year string,
+meter_num string,
+feet_from_curb int,
+violation_post_code string,
+violation_desc string,
+no_stand_stop_viol string,
+hydrant_viol string,
+double_park_viol string
+)
+row format delimited
+fields terminated by ','
+tblproperties("skip.header.line.count" ="1");
+
+create table parking_parq (
+summons_num string,
+plate_id string,
+reg_state string,
+plate_type string,
+issue_date string,
+violation_code int,
+vehicle_body_type string,
+vehicle_make string,
+agency string,
+street_1 float,
+street_2 float,
+street_3 float,
+vehicle_exp_date string,
+violation_loc int,
+violation_precinct int,
+issuer_precinct int,
+issuer_code string,
+issuer_command string,
+issuer_squad string,
+violation_time string,
+time_first_obs string,
+violation_country string,
+violation_fr_op string,
+house_num string,
+street_name string,
+intersect_street string,
+date_first_obs string,
+law_section string,
+sub_div string,
+violation_leg_code string,
+days_park_in_effect string,
+from_hours_in_effect string,
+to_hours_in_effect string,
+vehicle_color string,
+unregistered_veh string,
+vehicle_year string,
+meter_num string,
+feet_from_curb int,
+violation_post_code string,
+violation_desc string,
+no_stand_stop_viol string,
+hydrant_viol string,
+double_park_viol string
+)
+stored as parquet;
+
+from parking insert overwrite table parking_parq select *;
+
+create table part_parking (
+summons_num string,
+plate_id string,
+plate_type string,
+issue_date string,
+violation_code int,
+vehicle_body_type string,
+vehicle_make string,
+agency string,
+street_1 float,
+street_2 float,
+street_3 float,
+vehicle_exp_date string,
+violation_loc int,
+violation_precinct int,
+issuer_precinct int,
+issuer_code string,
+issuer_command string,
+issuer_squad string,
+violation_time string,
+time_first_obs string,
+violation_country string,
+violation_fr_op string,
+house_num string,
+street_name string,
+intersect_street string,
+date_first_obs string,
+law_section string,
+sub_div string,
+violation_leg_code string,
+days_park_in_effect string,
+from_hours_in_effect string,
+to_hours_in_effect string,
+vehicle_color string,
+unregistered_veh string,
+vehicle_year string,
+meter_num string,
+feet_from_curb int,
+violation_post_code string,
+violation_desc string,
+no_stand_stop_viol string,
+hydrant_viol string,
+double_park_viol string
+)
+partitioned by (reg_state string);
+
+insert overwrite table part_parking partition(reg_state) select summons_num,plate_id,plate_type,issue_date,violation_code,vehicle_body_type,vehicle_make,agency,street_1,street_2,street_3,vehicle_exp_date,violation_loc,violation_precinct,issuer_precinct,issuer_code,issuer_command,issuer_squad,violation_time,time_first_obs,violation_country,violation_fr_op,house_num, street_name,intersect_street,date_first_obs,law_section,sub_div,violation_leg_code,days_park_in_effect,from_hours_in_effect,to_hours_in_effect,vehicle_color,unregistered_veh,vehicle_year, meter_num,feet_from_curb,violation_post_code,violation_desc,no_stand_stop_viol,hydrant_viol,double_park_viol,reg_state from parking_parq;
+
+========================================================================================================================================================
+Part-1: Examine the Data
+========================================================================================================================================================
+1.) Total tickets for year 2017: select count(summons_num) from part_parking;
+    result: 10803028
+
+2.) Total unique states : select count(distinct reg_state) from part_parking;
+    result: 95
+
+3.) Tickets whose address is missing : select count(sum_number) from partition_violation_detail where street_code1 = 0 or street_code2 = 0 or street_code3 = 0 or street_code1 is null or street_code2 is null or street_code3 is null;
+    result: 3667559
+=======================================================================================================================================================
+Part-2: Aggregation tasks                                                                                                                                                         
+=======================================================================================================================================================
+
+1.) select violation_code,count(*) as frequency from part_parking group by violation_code order by frequency desc limit 5;
+result:  21      1528577
+	   36      1400614
+	   38      1062302
+	   14      893493
+	   20      618592
+
+
+2.)(a)  select vehicle_body_type,count(distinct summons_num) as parking_ticket from part_parking group by vehicle_body_type order by parking_ticket desc limit 5;
+result: SUBN    3719796
+	  4DSD    3082006
+	  VAN     1411964
+ 	  DELV    687324
+	  SDN     438191
+
+
+  (b)  select vehicle_make,count(distinct summons_num) as parking_ticket from part_parking group by vehicle_make order by parking_ticket desc limit 5;
+   result: FORD    1280956
+           TOYOT   1211447
+           HONDA   1079237
+           NISSA   918590
+           CHEVR   714654
+
+3.) (a)  select violation_precinct,count(distinct summons_num) as parking_ticket from part_parking group by violation_precinct order by parking_ticket desc limit 5;
+     result: 0       2072400
+		 19      535671
+ 		 14      352450
+		 1       331810
+		 18      306920
+
+
+   (b)   select issuer_precinct,count(distinct summons_num) as parking_issue_ticket  from part_parking group by issuer_precinct order by parking_issue_ticket desc limit 5;
+     result: 0       2388475
+		 19      521513
+		 14      344977
+		 1       321170
+ 		 18      296554
+
+
+4.)    select issuer_precinct,violation_code,count(distinct summons_num) as total from part_parking group by issuer_precinct,violation_code having issuer_precinct in (0,14,19) order by   issuer_precinct desc;
+
+       result: 
+
+19      79      18
+19      8       51
+19      17      2860
+19      26      4
+19      35      19
+19      53      2572
+19      62      7
+19      71      15107
+19      80      4
+19      91      3
+19      82      2140
+19      73      84
+19      64      701
+19      46      86386
+19      37      72437
+19      19      12896
+19      10      11057
+19      66      10
+19      48      2947
+19      39      74
+19      30      27
+19      21      54699
+19      12      1
+19      85      205
+19      67      13
+19      49      18
+19      89      3
+19      98      204
+19      94      1
+19      NULL    6
+19      0       2
+19      9       2279
+19      18      4438
+19      45      606
+19      72      160
+19      81      14
+19      99      5
+19      40      21513
+19      31      3294
+19      22      3
+19      13      868
+19      4       2
+19      14      57563
+19      23      339
+19      32      1
+19      33      7
+19      42      1428
+19      51      1122
+19      60      62
+19      69      4545
+19      78      482
+19      16      31353
+19      43      21
+19      52      21
+19      61      127
+19      70      8649
+19      83      126
+19      74      2528
+19      47      1380
+19      38      72343
+19      29      1
+19      20      27352
+19      11      291
+19      2       1
+19      41      113
+19      50      2879
+19      59      9
+19      68      79
+19      77      13
+19      24      2111
+19      84      8647
+19      75      182
+14      38      5604
+14      96      1
+14      78      308
+14      69      58025
+14      60      54
+14      51      1016
+14      42      20663
+14      24      1439
+14      6       2
+14      95      1
+14      86      1
+14      77      196
+14      68      16
+14      59      36
+14      50      2295
+14      41      139
+14      32      1
+14      23      1512
+14      14      73837
+14      5       1
+14      85      291
+14      67      120
+14      49      138
+14      40      6120
+14      31      39857
+14      22      22
+14      13      4403
+14      4       14
+14      84      11111
+14      75      110
+14      66      52
+14      48      4043
+14      39      14
+14      30      255
+14      21      2144
+14      12      8
+14      3       275
+14      92      1
+14      83      178
+14      74      1229
+14      65      1
+14      56      3
+14      47      30540
+14      29      4
+14      20      4577
+14      11      2001
+14      2       39
+14      91      2
+14      82      8853
+14      73      358
+14      64      1784
+14      46      13435
+14      37      2525
+14      19      11061
+14      10      2120
+14      1       279
+14      99      6
+14      81      12
+14      72      344
+14      63      1
+14      54      1
+14      45      1297
+14      27      15
+14      18      361
+14      9       4999
+14      0       1
+14      NULL    2
+14      98      113
+14      89      2955
+14      80      22
+14      71      5470
+14      62      132
+14      53      1470
+14      35      957
+14      26      383
+14      17      6160
+14      8       880
+14      79      1539
+14      70      2465
+14      61      119
+14      52      578
+14      43      73
+14      16      1507
+14      7       1
+0       37      446
+0       28      2
+0       84      101
+0       75      29
+0       66      9520
+0       48      208
+0       39      3
+0       21      268587
+0       12      4
+0       3       2
+0       78      6795
+0       7       516389
+0       16      778
+0       25      6
+0       34      1
+0       43      2
+0       19      1852
+0       10      385
+0       1       2
+0       17      3601
+0       26      1
+0       53      164
+0       62      241
+0       71      1161
+0       80      1314
+0       89      1
+0       98      648
+0       92      5
+0       83      20
+0       74      839
+0       65      9
+0       56      22
+0       47      77
+0       38      1017
+0       29      1
+0       20      5109
+0       11      16
+0       2       1
+0       52      11
+0       61      452
+0       70      781
+0       79      65
+0       88      7
+0       5       145642
+0       14      7088
+0       23      62
+0       32      1
+0       41      1689
+0       50      314
+0       59      1
+0       68      169
+0       97      1
+0       8       3
+0       54      4
+0       45      151
+0       36      1400614
+0       27      245
+0       77      42
+0       18      210
+0       9       94
+0       0       199
+0       99      36
+0       94      422
+0       85      2616
+0       76      2
+0       67      367
+0       58      3
+0       49      5
+0       40      2761
+0       31      614
+0       22      1
+0       13      52
+0       4       4
+0       86      3
+0       95      4
+0       6       51
+0       15      9
+0       24      617
+0       33      4
+0       42      112
+0       51      607
+0       60      67
+0       69      229
+0       72      13
+0       63      3
+0       91      4
+0       82      13
+0       73      8
+0       64      10
+0       46      2634
+
+
+5.)  select from_unixtime(unix_timestamp(concat(violation_time,'M'),'HHmmaaa'),'HH:mmaaa') ,violation_desc from part_parking group by from_unixtime(unix_timestamp(concat(violation_time,'M'),'HHmmaaa'),'HH:mmaaa'),violation_desc limit 10;
+result:
+NULL
+NULL    15 7
+00:00AM 21-No Parking (street clean)
+00:00AM 46B-Double Parking (Com-100Ft)
+00:00AM 68-Not Pkg. Comp. w Psted Sign
+00:00AM 83-Improper Registration
+00:01AM 17-No Stand (exc auth veh)
+00:01AM 77-Parked Bus (exc desig area)
+00:02AM 14-No Standing
+00:02AM 62-Beyond Marked Space
+
+
+
+6.) select case when substring(violation_time,1,2) in('00','01','02','03') and upper(substring(violation_time,-1))='A' then 1
+    when substring(violation_time,1,2) in ('04','05','06','07') and upper(substring(violation_time,-1))='A' then 2
+    when substring(violation_time,1,2) in ('08','09','10','11','12') and upper(substring(violation_time,-1))='A' then 3
+    when substring(violation_time,1,2) in('00','01','02','03') and upper(substring(violation_time,-1))='P' then 4
+    when substring(violation_time,1,2) in ('04','05','06','07') and upper(substring(violation_time,-1))='P' then 5
+    when substring(violation_time,1,2) in ('08','09','10','11','12') and upper(substring(violation_time,-1))='P' then 6
+    else null
+    end as time_bin ,violation_code,count(distinct summons_num) as cnt from part_parking where violation_code is not null and case when substring(violation_time,1,2) in('00','01','02','03') and upper(substring(violation_time,-1))='A' then 1
+    when substring(violation_time,1,2) in ('04','05','06','07') and upper(substring(violation_time,-1))='A' then 2
+    when substring(violation_time,1,2) in ('08','09','10','11','12') and upper(substring(violation_time,-1))='A' then 3
+    when substring(violation_time,1,2) in('00','01','02','03') and upper(substring(violation_time,-1))='P' then 4
+    when substring(violation_time,1,2) in ('04','05','06','07') and upper(substring(violation_time,-1))='P' then 5
+    when substring(violation_time,1,2) in ('08','09','10','11','12') and upper(substring(violation_time,-1))='P' then 6
+    else null
+    end is not null
+ group by violation_code,case when substring(violation_time,1,2) in('00','01','02','03') and upper(substring(violation_time,-1))='A' then 1
+ when substring(violation_time,1,2) in ('04','05','06','07') and upper(substring(violation_time,-1))='A' then 2
+ when substring(violation_time,1,2) in ('08','09','10','11','12') and upper(substring(violation_time,-1))='A' then 3
+ when substring(violation_time,1,2) in('00','01','02','03') and upper(substring(violation_time,-1))='P' then 4
+ when substring(violation_time,1,2) in ('04','05','06','07') and upper(substring(violation_time,-1))='P' then 5
+ when substring(violation_time,1,2) in ('08','09','10','11','12') and upper(substring(violation_time,-1))='P' then 6
+ else null
+ end order by time_bin,cnt desc;
+result(only few rows):
+1       21      73159
+1       40      45959
+1       14      29311
+1       78      28848
+1       20      22744
+1       7       15547
+1       85      13107
+1       46      10515
+1       19      10127
+1       71      7855
+
+
+7.) select case when substring(violation_time,1,2) in('00','01','02','03') and upper(substring(violation_time,-1))='A' then 1
+    when substring(violation_time,1,2) in ('04','05','06','07') and upper(substring(violation_time,-1))='A' then 2
+    when substring(violation_time,1,2) in ('08','09','10','11','12') and upper(substring(violation_time,-1))='A' then 3
+    when substring(violation_time,1,2) in('00','01','02','03') and upper(substring(violation_time,-1))='P' then 4
+    when substring(violation_time,1,2) in ('04','05','06','07') and upper(substring(violation_time,-1))='P' then 5
+    when substring(violation_time,1,2) in ('08','09','10','11','12') and upper(substring(violation_time,-1))='P' then 6
+    else null
+    end as time_bin ,violation_code,count(distinct summons_num) as cnt from part_parking where violation_code is not null and case when substring(violation_time,1,2) in('00','01','02','03') and upper(substring(violation_time,-1))='A' then 1
+    when substring(violation_time,1,2) in ('04','05','06','07') and upper(substring(violation_time,-1))='A' then 2
+    when substring(violation_time,1,2) in ('08','09','10','11','12') and upper(substring(violation_time,-1))='A' then 3
+    when substring(violation_time,1,2) in('00','01','02','03') and upper(substring(violation_time,-1))='P' then 4
+    when substring(violation_time,1,2) in ('04','05','06','07') and upper(substring(violation_time,-1))='P' then 5
+    when substring(violation_time,1,2) in ('08','09','10','11','12') and upper(substring(violation_time,-1))='P' then 6
+    else null
+    end is not null
+ group by violation_code,case when substring(violation_time,1,2) in('00','01','02','03') and upper(substring(violation_time,-1))='A' then 1
+ when substring(violation_time,1,2) in ('04','05','06','07') and upper(substring(violation_time,-1))='A' then 2
+ when substring(violation_time,1,2) in ('08','09','10','11','12') and upper(substring(violation_time,-1))='A' then 3
+ when substring(violation_time,1,2) in('00','01','02','03') and upper(substring(violation_time,-1))='P' then 4
+ when substring(violation_time,1,2) in ('04','05','06','07') and upper(substring(violation_time,-1))='P' then 5
+ when substring(violation_time,1,2) in ('08','09','10','11','12') and upper(substring(violation_time,-1))='P' then 6
+ else null
+ end order by cnt desc limit 10;
+result:
+3       21      1186975
+3       36      751422
+4       36      376961
+4       38      356252
+3       38      346619
+3       14      277040
+4       37      265845
+3       46      216904
+6       36      211434
+5       38      203231
+
+8.) (a) select case when MONTH(regexp_replace(from_unixtime(unix_timestamp(issue_date,'mm/dd/yyyy'),'yyyy/mm/dd'),'\/','\-')) in ('3','4','5') then 'spring'
+     when MONTH(regexp_replace(from_unixtime(unix_timestamp(issue_date,'mm/dd/yyyy'),'yyyy/mm/dd'),'\/','\-')) in ('6','7','8') then 'summer'
+     when MONTH(regexp_replace(from_unixtime(unix_timestamp(issue_date,'mm/dd/yyyy'),'yyyy/mm/dd'),'\/','\-')) in ('9','10','11') then 'fall'
+     when MONTH(regexp_replace(from_unixtime(unix_timestamp(issue_date,'mm/dd/yyyy'),'yyyy/mm/dd'),'\/','\-')) in ('12','1','2') then 'winter'
+     else null
+     end,count(distinct summons_num) from parking where case when MONTH(regexp_replace(from_unixtime(unix_timestamp(issue_date,'mm/dd/yyyy'),'yyyy/mm/dd'),'\/','\-')) in ('3','4','5') then    'spring'
+     when MONTH(regexp_replace(from_unixtime(unix_timestamp(issue_date,'mm/dd/yyyy'),'yyyy/mm/dd'),'\/','\-')) in ('6','7','8') then 'summer'
+     when MONTH(regexp_replace(from_unixtime(unix_timestamp(issue_date,'mm/dd/yyyy'),'yyyy/mm/dd'),'\/','\-')) in ('9','10','11') then 'fall'
+     when MONTH(regexp_replace(from_unixtime(unix_timestamp(issue_date,'mm/dd/yyyy'),'yyyy/mm/dd'),'\/','\-')) in ('12','1','2') then 'winter'
+     else null
+     end is not null group by case when month(regexp_replace(from_unixtime(unix_timestamp(issue_date,'mm/dd/yyyy'),'yyyy/mm/dd'),'\/','\-')) in ('3','4','5') then 'spring'
+     when month(regexp_replace(from_unixtime(unix_timestamp(issue_date,'mm/dd/yyyy'),'yyyy/mm/dd'),'\/','\-')) in ('6','7','8') then 'summer'
+     when month(regexp_replace(from_unixtime(unix_timestamp(issue_date,'mm/dd/yyyy'),'yyyy/mm/dd'),'\/','\-')) in ('9','10','11') then 'fall'
+     when month(regexp_replace(from_unixtime(unix_timestamp(issue_date,'mm/dd/yyyy'),'yyyy/mm/dd'),'\/','\-')) in ('12','1','2') then 'winter'
+     else 'unknown'
+     end limit 10;
+result:
+winter  2485320
+spring  2880684
+summer  2606193
+fall    2830791
+
+
+(b) select season,violation_code,cnt from(select season,violation_code,cnt, dense_rank() over(partition by season order by cnt desc) as dns from (select case when MONTH(regexp_replace(from_unixtime(unix_timestamp(issue_date,'mm/dd/yyyy'),'yyyy/mm/dd'),'\/','\-')) in ('3','4','5') then 'spring'
+     when MONTH(regexp_replace(from_unixtime(unix_timestamp(issue_date,'mm/dd/yyyy'),'yyyy/mm/dd'),'\/','\-')) in ('6','7','8') then 'summer'
+     when MONTH(regexp_replace(from_unixtime(unix_timestamp(issue_date,'mm/dd/yyyy'),'yyyy/mm/dd'),'\/','\-')) in ('9','10','11') then 'fall'
+     when MONTH(regexp_replace(from_unixtime(unix_timestamp(issue_date,'mm/dd/yyyy'),'yyyy/mm/dd'),'\/','\-')) in ('12','1','2') then 'winter'
+     else 'unknown'
+     end as season,violation_code,count(distinct summons_num) as cnt from part_parking where case when MONTH(regexp_replace(from_unixtime(unix_timestamp(issue_date,'mm/dd/yyyy'),'yyyy/mm/dd'),'\/','\-')) in ('3','4','5') then    'spring'
+     when MONTH(regexp_replace(from_unixtime(unix_timestamp(issue_date,'mm/dd/yyyy'),'yyyy/mm/dd'),'\/','\-')) in ('6','7','8') then 'summer'
+     when MONTH(regexp_replace(from_unixtime(unix_timestamp(issue_date,'mm/dd/yyyy'),'yyyy/mm/dd'),'\/','\-')) in ('9','10','11') then 'fall'
+     when MONTH(regexp_replace(from_unixtime(unix_timestamp(issue_date,'mm/dd/yyyy'),'yyyy/mm/dd'),'\/','\-')) in ('12','1','2') then 'winter'
+     else null
+     end is not null group by violation_code, case when month(regexp_replace(from_unixtime(unix_timestamp(issue_date,'mm/dd/yyyy'),'yyyy/mm/dd'),'\/','\-')) in ('3','4','5') then 'spring'
+     when month(regexp_replace(from_unixtime(unix_timestamp(issue_date,'mm/dd/yyyy'),'yyyy/mm/dd'),'\/','\-')) in ('6','7','8') then 'summer'
+     when month(regexp_replace(from_unixtime(unix_timestamp(issue_date,'mm/dd/yyyy'),'yyyy/mm/dd'),'\/','\-')) in ('9','10','11') then 'fall'
+     when month(regexp_replace(from_unixtime(unix_timestamp(issue_date,'mm/dd/yyyy'),'yyyy/mm/dd'),'\/','\-')) in ('12','1','2') then 'winter'
+     else 'unknown'
+     end)t1)t2 where dns in (1,2,3);
+result:
+fall    36      456046
+fall    21      357476
+fall    38      283827
+spring  21      402807
+spring  36      344834
+spring  38      271192
+summer  21      405956
+summer  38      247560
+summer  36      240396
+winter  21      362338
+winter  36      359338
+winter  38      259723
+
